@@ -83,7 +83,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
                 int dist=copyOfLaserData.Data[k].scanDistance/20; ///vzdialenost nahodne predelena 20 aby to nejako vyzeralo v okne.. zmen podla uvazenia
                 int xp=rect.width()-(rect.width()/2+dist*2*sin((360.0-copyOfLaserData.Data[k].scanAngle)*3.14159/180.0))+rect.topLeft().x(); //prepocet do obrazovky
                 int yp=rect.height()-(rect.height()/2+dist*2*cos((360.0-copyOfLaserData.Data[k].scanAngle)*3.14159/180.0))+rect.topLeft().y();//prepocet do obrazovky
-                if(rect.contains(xp,yp))//ak je bod vo vnutri nasho obdlznika tak iba vtedy budem chciet kreslit
+                if(rect.contains(xp,yp) )//ak je bod vo vnutri nasho obdlznika tak iba vtedy budem chciet kreslit
                     painter.drawEllipse(QPoint(xp, yp),2,2);
 
 
@@ -161,13 +161,16 @@ void MainWindow::robotStagnationDetection(double xx1, double yy1){
 
  }
 
-
+double calculateHypotenuse(double side1, double side2) {
+    return std::sqrt(std::pow(side1, 2) + std::pow(side2, 2));
+}
 
 
 int MainWindow::processThisRobot(TKobukiData robotdata)
 {
     static bool start = true;
     static bool distance_count = false;
+    static bool switch_go = false;
     static int previousEncoderLeft = robotdata.EncoderLeft, previousEncoderRight = robotdata.EncoderRight;
     ///static double odometerLeft, odometerRight = 0;
 
@@ -269,23 +272,23 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
 
         for(int k=0;k<copyOfLaserData.numberOfScans/*360*/;k++)
         {
-            if(k == 0 || k == 70|| k == 68|| k == 208 || k == 210 || k == 34 || k == 244){
+            if(k == 0 || k == 68|| k == 207  || k == 28 || k == 247){
 
                 if( k == 0){
                     //front 0deg
                     side_int=0;
-                }else if (k == 70 || k == 68){
+                }else if ( k == 68){
                     //left 90deg
                     side_int=1;
 
-                }else if(k == 208 || k == 210){
+                }else if( k == 207){
                     //right271 deg
                     side_int=2;
-                }else if(k == 3){
-                    //left 45deg
+                }else if(k == 28){
+                    //left 38deg
                     side_int=3;
-                }else{
-                    //right330 deg
+                }else if (k == 247){
+                    //right38 deg
                     side_int=4;
                 }
 
@@ -296,7 +299,7 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
                 //y
                 cloud[side_int][2]=(rect.height()-(rect.height()/2+cloud[side_int][0]*2*cos((360.0-copyOfLaserData.Data[k].scanAngle)*3.14159/180.0))+rect.topLeft().y())/scale;//prepocet do obrazovky
                 //std::printf("%f - %d \n", (((360.0-copyOfLaserData.Data[k].scanAngle)*3.14159/180.0) * 180/3.14159), k);
-               // std::printf("%f - %d \n", (copyOfLaserData.Data[k].scanDistance/scale), k);
+               //std::printf("%f - %d \n", (copyOfLaserData.Data[k].scanDistance/scale), k);
             }
 
         }
@@ -304,14 +307,17 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
 
             //std::thread thread1(&MainWindow::robotStagnationDetection,this,x, y);
 
+//double side_dis = calculateHypotenuse(0.15,0.1);
 
-
+//std::printf("%f -this \n", side_dis);
 //if(side_move == false && stuck == false){
 //        if(calculate_Distance((cloud[0][1] + x_pos),(cloud[0][2] + y_pos),finish_X,finish_Y) <= 0.3){
 
 //            robot.setRotationSpeed(0);
 //            robot.setTranslationSpeed(0);
 //            MoveRobot( x,  y, rads);
+
+
 distance_travelled = abs(calculate_Distance(last_movex,last_movey,x,y));
 
 
@@ -324,35 +330,36 @@ if(distance_travelled >= 0.1 && distance_count){
         last_movex= x;
         last_movey= y;
     distance_count = false;
+
 }else if(distance_count){
 
         robot.setTranslationSpeed(speed);
 
-}else if ((cloud[0][0] <= 0.40 ||cloud[1][0] <= 0.40 || cloud[2][0] <= 0.40) && (cloud[0][0] >= 0.20 ||cloud[1][0] >= 0.20 || cloud[2][0] >= 0.20)){
+
+}else if ((cloud[0][0] <= 0.40 ||cloud[1][0] <= 0.40 || cloud[2][0] <= 0.40)){
 
             robot.setTranslationSpeed(0);
 
-            if(distance_count == false){
+            if(distance_count == false && wall_follow){
                 last_movex= x;
                 last_movey= y;
                 distance_count = true;
+
             }
 
 
                 robot.setRotationSpeed(1);
 
 
-
+            std::printf("%f \n", (copyOfLaserData.Data[0].scanDistance/scale));
 
                 if(copyOfLaserData.Data[0].scanDistance/scale <= 1){
-                    while(copyOfLaserData.Data[0].scanDistance/scale <= 1){
+                    while(copyOfLaserData.Data[0].scanDistance/scale <= 1 || copyOfLaserData.Data[28].scanDistance/scale <= 0.20 || copyOfLaserData.Data[247].scanDistance/scale <= 0.20 ){
                         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                        std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
-                        //std::printf("here x1 \n");
+                        //std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
+                        std::printf("here x1 \n");
                     }
-                }else{
-
-                     std::this_thread::sleep_for(std::chrono::milliseconds(300));
+                    std::printf("after while loop \n");
                 }
 
                 robot.setRotationSpeed(0);
@@ -363,33 +370,7 @@ if(distance_travelled >= 0.1 && distance_count){
 
             wall_follow = true;
 
-        }else if((cloud[0][0] <= 0.20 ||cloud[1][0] <= 0.20 || cloud[2][0] <= 0.20)){
-
-            robot.setTranslationSpeed(0);
-
-            if(distance_count == false){
-                last_movex= x;
-                last_movey= y;
-                distance_count = true;
-            }
-
-                robot.setRotationSpeed(1);
-
-
-//                while(copyOfLaserData.Data[1].scanDistance/scale <= 1){
-//                    std::printf("here x2 \n");
-//                    //std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
-//                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-//                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(300));
-                robot.setRotationSpeed(0);
-
-           std::printf("here2 \n");                //stackne sa tu
-            robot.setTranslationSpeed(speed);
-
-            wall_follow = false;
-
-        }else if((wall_follow) && (cloud[0][0] >= 0.65 || cloud[1][0] >= 0.65 || cloud[2][0] >= 0.65)){
+        }else if((wall_follow) && (cloud[0][0] >= 0.7 || cloud[1][0] >= 0.7 || cloud[2][0] >= 0.7)){
             //std::printf("here2 \n");
             robot.setTranslationSpeed(0);
 
@@ -401,13 +382,16 @@ if(distance_travelled >= 0.1 && distance_count){
 
                 robot.setRotationSpeed(-1);
 
-//                while(copyOfLaserData.Data[1].scanDistance/scale >= 0.6){
-//                    std::printf("here x3 \n");
-//                    //std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
-//                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-//                }
+                if(copyOfLaserData.Data[0].scanDistance/scale >= 1){
+                    while(copyOfLaserData.Data[0].scanDistance/scale >= 1 || copyOfLaserData.Data[28].scanDistance/scale <= 0.20 || copyOfLaserData.Data[247].scanDistance/scale <= 0.20 ){
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                        //std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    }
+
+                }
+
+
             std::printf("here3 \n");
             robot.setRotationSpeed(0);
 
@@ -415,7 +399,7 @@ if(distance_travelled >= 0.1 && distance_count){
 
 
         }else{
-            //std::printf("here3 \n");
+            std::printf("here4 \n");
             wall_follow = false;
             Left_wall = false;
             MoveRobot( x,  y, rads);
