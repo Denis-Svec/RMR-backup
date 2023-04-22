@@ -15,7 +15,7 @@ static queue<double> qxr, qyr;
 static double yr = 0, xr = 0;
 static double finish_X = 4.7, finish_Y = 2;
 static  bool side_move = false;
-static bool stuck = false;
+
 
 //LIDAR K coord 1,70,140,210 counter clockwise;
 
@@ -114,52 +114,52 @@ void  MainWindow::setUiValues(double robotX,double robotY,double robotFi)
 ///
 ///
 ///
-void MainWindow::robotStagnationDetection(double xx1, double yy1){
+//void MainWindow::robotStagnationDetection(double xx1, double yy1){
 
-    location_vecto_x.push_back(xx1);
-    location_vecto_y.push_back(yy1);
-    float average = 0.0;
-    bool same_x= false;
+//    location_vecto_x.push_back(xx1);
+//    location_vecto_y.push_back(yy1);
+//    float average = 0.0;
+//    bool same_x= false;
 
-    if(location_vecto_x.size() >= 20){
-        for (const float& value : location_vecto_x) {
-            average += value;
-            //std::printf("%f - stop detection\n", value);
-              }
-              average /= location_vecto_x.size();
+//    if(location_vecto_x.size() >= 20){
+//        for (const float& value : location_vecto_x) {
+//            average += value;
+//            //std::printf("%f - stop detection\n", value);
+//              }
+//              average /= location_vecto_x.size();
 
-                // Check if all values are close to the average within the given tolerance
-                for (float value : location_vecto_x) {
-                    if (std::abs(value - average) == 0.0) {
+//                // Check if all values are close to the average within the given tolerance
+//                for (float value : location_vecto_x) {
+//                    if (std::abs(value - average) == 0.0) {
 
-                        same_x = true;
-                        std::printf("GOT HERE\n");
-                    }
-                }
-                if(same_x && average != 0){
-                    average = 0.0;
-                for (float value : location_vecto_y) {
-                    average += value;
-                      }
-                      average /= location_vecto_y.size();
+//                        same_x = true;
+//                        std::printf("GOT HERE\n");
+//                    }
+//                }
+//                if(same_x && average != 0){
+//                    average = 0.0;
+//                for (float value : location_vecto_y) {
+//                    average += value;
+//                      }
+//                      average /= location_vecto_y.size();
 
-                        // Check if all values are close to the average within the given tolerance
-                        for (float value : location_vecto_y) {
-                            if (std::abs(value - average) == 0.0) {
-                                location_vecto_y.clear();
-                                location_vecto_x.clear();
-                                std::printf("STOOOOOOOOP\n");
-                                stuck= true;
-                            }
-                        }
-                }
-                location_vecto_y.clear();
-                location_vecto_x.clear();
-        }
+//                        // Check if all values are close to the average within the given tolerance
+//                        for (float value : location_vecto_y) {
+//                            if (std::abs(value - average) == 0.0) {
+//                                location_vecto_y.clear();
+//                                location_vecto_x.clear();
+//                                std::printf("STOOOOOOOOP\n");
+//                                stuck= true;
+//                            }
+//                        }
+//                }
+//                location_vecto_y.clear();
+//                location_vecto_x.clear();
+//        }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+//    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
- }
+// }
 
 double calculateHypotenuse(double side1, double side2) {
     return std::sqrt(std::pow(side1, 2) + std::pow(side2, 2));
@@ -171,6 +171,8 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
     static bool start = true;
     static bool distance_count = false;
     static bool switch_go = false;
+    static bool stuck = false;
+    static bool step_two = true;
     static int previousEncoderLeft = robotdata.EncoderLeft, previousEncoderRight = robotdata.EncoderRight;
     ///static double odometerLeft, odometerRight = 0;
 
@@ -184,6 +186,7 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
     static float last_movex = 0, last_movey = 0;
 
     static int speed = 300;
+    static float side_distance = 0.8;
     static double tTM = 0.000085292090497737556558;
 
     static double pi1 = 3.14159265359;
@@ -272,6 +275,15 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
 
         for(int k=0;k<copyOfLaserData.numberOfScans/*360*/;k++)
         {
+            if (stuck == false && copyOfLaserData.Data[k].scanDistance/scale <= 0.25 && copyOfLaserData.Data[0].scanDistance/scale != 0){
+                last_movex= x;
+                last_movey= y;
+                stuck = true;
+                std::printf("STUCK\n");
+            }
+
+
+
             if(k == 0 || k == 68|| k == 207  || k == 28 || k == 247){
 
                 if( k == 0){
@@ -324,89 +336,134 @@ distance_travelled = abs(calculate_Distance(last_movex,last_movey,x,y));
 
 std::printf("%f  \n", distance_travelled);
 
-if(distance_travelled >= 0.1 && distance_count){
+
+if(stuck){
     robot.setTranslationSpeed(0);
-        std::printf("here dist\n");
-        last_movex= x;
-        last_movey= y;
-    distance_count = false;
+    robot.setTranslationSpeed(-speed);
 
-}else if(distance_count){
-
+    if(step_two){
         robot.setTranslationSpeed(speed);
-
-
-}else if ((cloud[0][0] <= 0.40 ||cloud[1][0] <= 0.40 || cloud[2][0] <= 0.40)){
-
-            robot.setTranslationSpeed(0);
-
-            if(distance_count == false && wall_follow){
-                last_movex= x;
-                last_movey= y;
-                distance_count = true;
-
-            }
-
-
-                robot.setRotationSpeed(1);
-
-
-            std::printf("%f \n", (copyOfLaserData.Data[0].scanDistance/scale));
-
-                if(copyOfLaserData.Data[0].scanDistance/scale <= 1){
-                    while(copyOfLaserData.Data[0].scanDistance/scale <= 1 || copyOfLaserData.Data[28].scanDistance/scale <= 0.20 || copyOfLaserData.Data[247].scanDistance/scale <= 0.20 ){
-                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                        //std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
-                        std::printf("here x1 \n");
-                    }
-                    std::printf("after while loop \n");
-                }
-
-                robot.setRotationSpeed(0);
-
-            std::printf("here1 \n");
-            robot.setTranslationSpeed(speed);
-
-
-            wall_follow = true;
-
-        }else if((wall_follow) && (cloud[0][0] >= 0.7 || cloud[1][0] >= 0.7 || cloud[2][0] >= 0.7)){
-            //std::printf("here2 \n");
-            robot.setTranslationSpeed(0);
-
-            if(distance_count == false){
-                last_movex= x;
-                last_movey= y;
-                distance_count = true;
-            }
-
-                robot.setRotationSpeed(-1);
-
-                if(copyOfLaserData.Data[0].scanDistance/scale >= 1){
-                    while(copyOfLaserData.Data[0].scanDistance/scale >= 1 || copyOfLaserData.Data[28].scanDistance/scale <= 0.20 || copyOfLaserData.Data[247].scanDistance/scale <= 0.20 ){
-                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                        //std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
-
-                    }
-
-                }
-
-
-            std::printf("here3 \n");
-            robot.setRotationSpeed(0);
-
-            robot.setTranslationSpeed(speed);
-
-
-        }else{
-            std::printf("here4 \n");
-            wall_follow = false;
-            Left_wall = false;
-            MoveRobot( x,  y, rads);
-
+        step_two = false;
+        if(distance_travelled >= 0.1 ){
+            last_movex= x;
+            last_movey= y;
+            switch_go = true;
         }
 
+    }
+    else if(distance_travelled >= 0.1 ){
+        robot.setTranslationSpeed(0);
+        robot.setRotationSpeed(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        stuck = false;
 
+        last_movex= x;
+        last_movey= y;
+
+
+        step_two = true;
+    }
+
+
+
+}else if(switch_go){
+
+    if(((cloud[0][0] <= 0.10 && cloud[0][0] != 0) || (cloud[1][0] <= 0.10 && cloud[1][0] != 0) || (cloud[2][0] <= 0.10 && cloud[2][0] != 0))){
+        robot.setTranslationSpeed(0);
+        distance_count = false;
+        switch_go = false;
+    }
+    else if(distance_travelled >= 0.2 && distance_count){
+        robot.setTranslationSpeed(0);
+            std::printf("stop move\n");
+            last_movex= x;
+            last_movey= y;
+        distance_count = false;
+        switch_go = false;
+    }else if(distance_count){
+        std::printf("move\n");
+            robot.setTranslationSpeed(speed);
+    }
+
+}else if(switch_go == false){
+    if (((cloud[0][0] <= 0.40 && cloud[0][0] != 0) || (cloud[1][0] <= 0.40 && cloud[1][0] != 0) || (cloud[2][0] <= 0.40 && cloud[2][0] != 0))){
+
+                robot.setTranslationSpeed(0);
+
+
+
+
+                    robot.setRotationSpeed(1);
+
+
+                std::printf("%f \n", (copyOfLaserData.Data[0].scanDistance/scale));
+
+                    if(copyOfLaserData.Data[0].scanDistance/scale <= 1 && copyOfLaserData.Data[0].scanDistance/scale != 0){
+                        while((copyOfLaserData.Data[0].scanDistance/scale <= 1 && copyOfLaserData.Data[0].scanDistance/scale != 0) || (copyOfLaserData.Data[28].scanDistance/scale <= side_distance && copyOfLaserData.Data[28].scanDistance/scale != 0)|| (copyOfLaserData.Data[247].scanDistance/scale <= side_distance && copyOfLaserData.Data[247].scanDistance/scale != 0)){
+                            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                            std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
+                            std::printf("here x1 \n");
+                        }
+                        std::printf("after while loop \n");
+                    }else if (copyOfLaserData.Data[28].scanDistance/scale <= side_distance || copyOfLaserData.Data[247].scanDistance/scale <= side_distance){
+                        while((copyOfLaserData.Data[0].scanDistance/scale <= 1 && copyOfLaserData.Data[0].scanDistance/scale != 0) || (copyOfLaserData.Data[28].scanDistance/scale <= side_distance && copyOfLaserData.Data[28].scanDistance/scale != 0)|| (copyOfLaserData.Data[247].scanDistance/scale <= side_distance && copyOfLaserData.Data[247].scanDistance/scale != 0) ){
+                            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                            std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
+                            std::printf("here y1 \n");
+                        }
+                    }
+
+                    robot.setRotationSpeed(0);
+
+                std::printf("here1 \n");
+                //robot.setTranslationSpeed(speed);
+                if(distance_count == false){
+                    last_movex= x;
+                    last_movey= y;
+                    distance_count = true;
+
+                }
+                switch_go = true;
+                wall_follow = true;
+
+            }else if((wall_follow) && ((cloud[0][0] >= 0.8 && cloud[0][0] != 0) || (cloud[1][0] >= 0.8 && cloud[1][0] != 0) || (cloud[2][0] >= 0.8 && cloud[2][0] != 0))){
+                //std::printf("here2 \n");
+                robot.setTranslationSpeed(0);
+
+
+                    robot.setRotationSpeed(-1);
+
+                    //if(copyOfLaserData.Data[0].scanDistance/scale >= 0.6 && copyOfLaserData.Data[0].scanDistance/scale != 0){
+                        while(copyOfLaserData.Data[0].scanDistance/scale >= 0.8 && copyOfLaserData.Data[0].scanDistance/scale != 0){
+                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                            //std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
+
+                        }
+
+                    //}
+
+
+                std::printf("here3 \n");
+                robot.setRotationSpeed(0);
+
+                if(distance_count == false){
+                    last_movex= x;
+                    last_movey= y;
+                    distance_count = true;
+                }
+                //robot.setTranslationSpeed(speed);
+                switch_go = true;
+
+
+            }else{
+                std::printf("here4 \n");
+                wall_follow = false;
+                Left_wall = false;
+                MoveRobot( x,  y, rads);
+
+            }
+
+}
 
 
 //thread1.join();
