@@ -180,7 +180,7 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
 
     static float previousRads = 0;
     static float distance_travelled =0;
-
+    static float temp_distance =0;
     static float rads= 0;
 
     //int rotation;
@@ -277,8 +277,9 @@ int MainWindow::processThisRobot(TKobukiData robotdata)
 
         for(int k=0;k<copyOfLaserData.numberOfScans/*360*/;k++)
         {
-            std::printf("%f - %d \n", (((360.0-copyOfLaserData.Data[k].scanAngle)*3.14159/180.0) * 180/3.14159), k);
-            if (stuck == false && copyOfLaserData.Data[k].scanDistance/scale <= 0.22 && copyOfLaserData.Data[0].scanDistance/scale >= 0.01){
+
+            temp_distance = copyOfLaserData.Data[k].scanDistance/scale;
+            if (stuck == false && temp_distance <= 0.22 && temp_distance >= 0.01){
 
                 if(k <=70 || k >=205){
                     //predok
@@ -369,7 +370,7 @@ if(stuck){
 
 //    }
     if(distance_travelled >= 0.1 ){
-        std::printf("stuck 3\n");
+//        std::printf("stuck 3\n");
         robot.setTranslationSpeed(0);
         robot.setRotationSpeed(1);
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -386,7 +387,7 @@ if(stuck){
         robot.setTranslationSpeed(0);
         robot.setTranslationSpeed(Front_back_det*speed);
 
-        std::printf("stuck 1\n");
+//        std::printf("stuck 1\n");
     }
 
 
@@ -422,21 +423,24 @@ if(stuck){
 
 
                 //std::printf("%f \n", (copyOfLaserData.Data[0].scanDistance/scale));
+                    temp_distance = copyOfLaserData.Data[0].scanDistance/scale;
+                    if(temp_distance <= 1 && temp_distance >= 0.01){
 
-                    if(copyOfLaserData.Data[0].scanDistance/scale <= 1 && copyOfLaserData.Data[0].scanDistance/scale != 0){
-                        while((copyOfLaserData.Data[0].scanDistance/scale <= 1 && copyOfLaserData.Data[0].scanDistance/scale >= 0.01) || (copyOfLaserData.Data[28].scanDistance/scale <= side_distance && copyOfLaserData.Data[28].scanDistance/scale >= 0.01)|| (copyOfLaserData.Data[247].scanDistance/scale <= side_distance && copyOfLaserData.Data[247].scanDistance/scale >= 0.01)){
+                        while((temp_distance <= 1 && temp_distance >= 0.01) || (copyOfLaserData.Data[28].scanDistance/scale <= side_distance && copyOfLaserData.Data[28].scanDistance/scale >= 0.01)|| (copyOfLaserData.Data[247].scanDistance/scale <= side_distance && copyOfLaserData.Data[247].scanDistance/scale >= 0.01)){
                             std::this_thread::sleep_for(std::chrono::milliseconds(200));
 //                            std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
-//                            std::printf("here x1 \n");
+                            std::printf("here x1 \n");
+                            temp_distance = copyOfLaserData.Data[0].scanDistance/scale;
                         }
 
-                    }else if (copyOfLaserData.Data[28].scanDistance/scale <= side_distance || copyOfLaserData.Data[247].scanDistance/scale <= side_distance){
-                        while((copyOfLaserData.Data[0].scanDistance/scale <= 1 && copyOfLaserData.Data[0].scanDistance/scale >= 0.01) || (copyOfLaserData.Data[28].scanDistance/scale <= side_distance && copyOfLaserData.Data[28].scanDistance/scale >= 0.01)|| (copyOfLaserData.Data[247].scanDistance/scale <= side_distance && copyOfLaserData.Data[247].scanDistance/scale >= 0.01) ){
-                            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-//                            std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
-//                            std::printf("here y1 \n");
-                        }
                     }
+//                    else if (copyOfLaserData.Data[28].scanDistance/scale <= side_distance || copyOfLaserData.Data[247].scanDistance/scale <= side_distance){
+//                        while((copyOfLaserData.Data[0].scanDistance/scale <= 1 && copyOfLaserData.Data[0].scanDistance/scale >= 0.01) || (copyOfLaserData.Data[28].scanDistance/scale <= side_distance && copyOfLaserData.Data[28].scanDistance/scale >= 0.01)|| (copyOfLaserData.Data[247].scanDistance/scale <= side_distance && copyOfLaserData.Data[247].scanDistance/scale >= 0.01) ){
+//                            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+////                            std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
+//                            std::printf("here y1 \n");
+//                        }
+//                    }
 
                     robot.setRotationSpeed(0);
 
@@ -451,7 +455,7 @@ if(stuck){
                 switch_go = true;
                 wall_follow = true;
 
-            }else if((wall_follow) && ((cloud[0][0] >= 0.8 && cloud[0][0] != 0) || (cloud[1][0] >= 0.8 && cloud[1][0] != 0) || (cloud[2][0] >= 0.8 && cloud[2][0] != 0))){
+            }else if((wall_follow) && ((cloud[1][0] >= 0.6) || (cloud[2][0] >= 0.6))){
                 //std::printf("here2 \n");
                 robot.setTranslationSpeed(0);
 
@@ -459,10 +463,11 @@ if(stuck){
                     robot.setRotationSpeed(-1);
 
                     //if(copyOfLaserData.Data[0].scanDistance/scale >= 0.6 && copyOfLaserData.Data[0].scanDistance/scale != 0){
-                        while(copyOfLaserData.Data[0].scanDistance/scale >= 0.8 && copyOfLaserData.Data[0].scanDistance/scale >= 0.01){
+                    temp_distance = copyOfLaserData.Data[0].scanDistance/scale;
+                        while(temp_distance >= 0.8 && temp_distance >= 0.01){
                             std::this_thread::sleep_for(std::chrono::milliseconds(100));
                             //std::printf("%f  \n", (copyOfLaserData.Data[1].scanDistance/scale));
-
+                            temp_distance = copyOfLaserData.Data[0].scanDistance/scale;
                         }
 
                     //}
