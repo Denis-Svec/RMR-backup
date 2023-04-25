@@ -385,7 +385,7 @@ else if(abs(calculate_Distance(finish_X,finish_Y,x,y)) <= distance_to_finish){
     wall_follow = false;
     Left_wall = false;
     MoveRobot( x,  y, rads);
-    distance_to_finish = distance_to_finish/2;
+
      std::printf("FINISH move\n");
 
 //}else if(bug2){
